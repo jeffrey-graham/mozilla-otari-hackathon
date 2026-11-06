@@ -1,0 +1,58 @@
+# Mozilla Otari Gateway Configuration for Otari Bounty Sentinel
+# Run with: `otari serve --config config.otari.example.yml`
+# Or connect directly to hosted https://api.otari.ai/api/v1
+
+database_url: "sqlite:///./otari-sentinel.db"
+host: "127.0.0.1"
+port: 8000
+
+default_pricing: true
+require_pricing: false
+
+providers:
+  openai:
+    provider_type: openai
+    api_key: ${OPENAI_API_KEY}
+    max_retries: 0
+  anthropic:
+    provider_type: anthropic
+    api_key: ${ANTHROPIC_API_KEY}
+    max_retries: 0
+  ollama:
+    provider_type: ollama
+    api_base: "http://127.0.0.1:11434"
+    models:
+      - "qwen2.5-coder:32b"
+      - "deepseek-r1:14b"
+      - "llama3.3:70b"
+
+aliases:
+  bounty-fast: "ollama:qwen2.5-coder:32b"
+  bounty-deep: "anthropic:claude-sonnet-4-6"
+
+routing:
+  enabled: true
+  policies:
+    # Budget-aware routing policy: shifts from frontier to open-weight when >=80% budget used
+    bounty-smart:
+      select:
+        - when:
+            budget_used_pct: { gte: 80 }
+          target: "ollama:qwen2.5-coder:32b"
+        - default: "anthropic:claude-sonnet-4-6"
+      on_failure:
+        - "openai:gpt-4o-mini"
+        - "ollama:qwen2.5-coder:32b"
+
+    # Open-weight first consensus policy for MozFest Devs Wilding
+    openweight-consensus:
+      select:
+        - default: "ollama:qwen2.5-coder:32b"
+      on_failure:
+        - "ollama:deepseek-r1:14b"
+        - "openai:gpt-4o-mini"
+
+budgets:
+  bounty-hunter-daily:
+    max_budget: 5.00
+    reset_alignment: calendar_day

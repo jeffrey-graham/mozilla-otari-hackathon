@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "otari-bounty-sentinel"
+version = "0.1.0"
+description = "Local-First Multi-LLM Code Audit & Bounty Triage CLI, Web Dashboard & Agent Guardrails Suite powered by Mozilla Otari"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Mozilla Otari Hackathon Builder" }]
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn>=0.30.0",
+  "httpx>=0.28.0",
+  "pydantic>=2.0",
+  "pyyaml>=6.0",
+  "click>=8.1.0",
+  "rich>=13.0",
+  "openai>=1.50.0",
+]
+
+[project.scripts]
+otari-bounty-sentinel = "otari_bounty_sentinel.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

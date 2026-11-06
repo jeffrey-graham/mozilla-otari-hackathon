@@ -1,0 +1,55 @@
+schema_version: "1.0"
+policy:
+  id: otari-bounty-sentinel/security-governance
+  description: >-
+    Repository-committed Mozilla Otari Agent Guardrails preventing autonomous
+    bounty-triage and patch agents from modifying guardrail rules, exfiltrating
+    secrets, force-pushing, or skipping test verification.
+
+gates:
+  - id: no-agent-edited-otari-policy
+    type: path
+    runs: [pre_tool_use.edit_target]
+    enforcement: required
+    forbidden: [".otari/**"]
+    accept_warnings: [shell-write-unseen]
+    message: >-
+      Files under .otari/ define the repository's Agent Guardrails and must only
+      be modified by a human operator.
+
+  - id: no-secret-file-read-or-edit
+    type: path
+    runs: [pre_tool_use.read_target, pre_tool_use.edit_target]
+    enforcement: required
+    forbidden: [".env", "**/.env", ".env.*", "**/.env.*", "**/secrets.yml"]
+    accept_warnings: [shell-read-unseen, shell-write-unseen]
+    message: >-
+      Do not read or modify .env or credential files. Configure provider keys
+      behind the Mozilla Otari gateway instead.
+
+  - id: forbid-destructive-git-and-network-exfil
+    type: command
+    runs: [pre_tool_use.command]
+    enforcement: required
+    forbidden:
+      - "git push --force"
+      - "git push -f"
+      - "git reset --hard"
+      - "curl -X POST"
+    message: >-
+      Destructive git operations and raw outbound POST exfiltration commands are
+      blocked by Otari Agent Guardrails.
+
+  - id: python-changes-require-pytest
+    type: command_if_changed
+    runs: [stop.session]
+    enforcement: required
+    when_changed:
+      - "src/*.py"
+      - "src/**/*.py"
+      - "tests/*.py"
+      - "tests/**/*.py"
+    require: ["pytest"]
+    accept_warnings: [glob-matches-no-file]
+    message: >-
+      Python source or test files changed; run `pytest` before finishing the turn.
